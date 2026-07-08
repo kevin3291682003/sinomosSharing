@@ -5,17 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>20260708 小樽相簿</title>
 
-  <!--
-    Chrome / Edge / Firefox 通常無法原生顯示 HEIC。
-    這裡使用 heic2any：若 <img> 載入 HEIC 失敗，就用 JS/WASM 在瀏覽器端轉成 JPEG 預覽。
-    原始下載仍然維持 .HEIC。
-  -->
   <script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
 
   <style>
     :root {
       --bg: #050507;
-      --panel: #111217;
       --text: #f3f4f6;
       --muted: #9ca3af;
       --line: rgba(255,255,255,.1);
@@ -35,6 +29,10 @@
         radial-gradient(circle at 20% 0%, rgba(125,211,252,.18), transparent 34%),
         radial-gradient(circle at 80% 20%, rgba(168,85,247,.12), transparent 30%),
         var(--bg);
+    }
+
+    body.viewer-open {
+      overflow: hidden;
     }
 
     a { color: inherit; text-decoration: none; }
@@ -70,7 +68,7 @@
 
     .desc {
       margin: 16px 0 0;
-      max-width: 660px;
+      max-width: 680px;
       color: var(--muted);
       line-height: 1.7;
       font-size: 15px;
@@ -216,58 +214,102 @@
       line-height: 1.65;
     }
 
-    dialog {
-      width: min(1100px, calc(100% - 24px));
-      padding: 0;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: #08090d;
-      color: var(--text);
-      box-shadow: 0 40px 120px rgba(0,0,0,.75);
-    }
-
-    dialog::backdrop {
-      background: rgba(0,0,0,.78);
+    .viewer {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      background: rgba(0,0,0,.92);
       backdrop-filter: blur(10px);
     }
 
-    .viewer-head {
+    .viewer.show {
+      display: block;
+    }
+
+    .viewer-topbar {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 1003;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
+      pointer-events: none;
     }
 
     .viewer-title {
-      font-size: 14px;
+      max-width: calc(100vw - 96px);
+      padding: 10px 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      background: rgba(10,10,12,.72);
+      backdrop-filter: blur(14px);
       color: var(--muted);
+      font-size: 13px;
       word-break: break-all;
+      pointer-events: auto;
     }
 
-    .viewer-body {
-      position: relative;
-      padding: 16px;
+    .viewer-close {
+      width: 46px;
+      height: 46px;
+      padding: 0;
+      border-radius: 999px;
+      font-size: 28px;
+      line-height: 1;
+      pointer-events: auto;
+    }
+
+    .viewer-stage {
+      position: absolute;
+      inset: 0;
+      overflow: auto;
+      cursor: grab;
+      overscroll-behavior: contain;
+      padding: 88px 48px 48px;
+    }
+
+    .viewer-stage.dragging {
+      cursor: grabbing;
+      user-select: none;
+    }
+
+    .viewer-canvas {
+      min-width: 100%;
+      min-height: 100%;
       display: grid;
       place-items: center;
-      min-height: 55vh;
     }
 
-    .viewer-body img {
-      max-width: 100%;
-      max-height: 72vh;
-      border-radius: 16px;
-      object-fit: contain;
+    .viewer-canvas img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: none;
+      max-height: none;
+      border-radius: 12px;
+      box-shadow: 0 24px 90px rgba(0,0,0,.7);
       background: #111;
+      transform-origin: center center;
     }
 
-    .close {
-      width: 38px;
-      height: 38px;
-      padding: 0;
-      font-size: 22px;
-      line-height: 1;
+    .viewer-hint {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      z-index: 1003;
+      transform: translateX(-50%);
+      padding: 9px 13px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      background: rgba(10,10,12,.72);
+      backdrop-filter: blur(14px);
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
     }
 
     @media (max-width: 900px) {
@@ -280,6 +322,9 @@
       .shell { width: min(100% - 22px, 1180px); padding-top: 26px; }
       .card { grid-column: span 12; }
       .actions { flex-direction: column; }
+      .viewer-stage { padding: 78px 22px 34px; }
+      .viewer-title { font-size: 12px; max-width: calc(100vw - 82px); }
+      .viewer-close { width: 42px; height: 42px; }
     }
   </style>
 </head>
@@ -290,7 +335,7 @@
         <div class="eyebrow">Photo Gallery</div>
         <h1>20260708<br>小樽相簿</h1>
         <p class="desc">
-          黑色沉浸式相簿介面。Chrome 若無法原生顯示 HEIC，會自動在瀏覽器端轉成 JPEG 預覽；下載仍保留原始 HEIC。
+          黑色沉浸式相簿介面。Chrome 若無法原生顯示 HEIC，會自動在瀏覽器端轉成 JPEG 預覽；按下放大會以約 1/2 原始圖尺寸開啟。
         </p>
       </div>
 
@@ -307,26 +352,31 @@
     <section id="gallery" class="grid" aria-label="小樽相簿"></section>
 
     <div class="notice">
-      第一次在 Chrome 開啟 HEIC 會比較慢，因為瀏覽器要下載解碼器並轉圖。照片多或解析度很高時，手機可能會稍微卡。
+      放大模式：圖片會以原圖 50% 尺寸開啟，可用滑鼠拖曳或滾動查看上下左右；右上角 × 固定可點，關閉後回到正常網頁。
     </div>
   </main>
 
-  <dialog id="viewer">
-    <div class="viewer-head">
+  <section id="viewer" class="viewer" aria-hidden="true">
+    <div class="viewer-topbar">
       <div id="viewerTitle" class="viewer-title"></div>
-      <button class="btn close" id="closeViewer" aria-label="關閉">×</button>
+      <button class="btn viewer-close" id="closeViewer" type="button" aria-label="關閉">×</button>
     </div>
-    <div class="viewer-body">
-      <div id="viewerStatus" class="status hide">
-        <div>
-          <div class="spinner"></div>
-          <strong>正在轉換 HEIC 預覽</strong>
-          <span>請稍候</span>
+
+    <div id="viewerStage" class="viewer-stage">
+      <div class="viewer-canvas">
+        <div id="viewerStatus" class="status hide">
+          <div>
+            <div class="spinner"></div>
+            <strong>正在準備預覽</strong>
+            <span>請稍候</span>
+          </div>
         </div>
+        <img id="viewerImg" alt="">
       </div>
-      <img id="viewerImg" alt="">
     </div>
-  </dialog>
+
+    <div class="viewer-hint">拖曳或滾動查看圖片，按 × 關閉</div>
+  </section>
 
   <script>
     const baseUrl = "https://raw.githubusercontent.com/kevin3291682003/sinomosSharing/main/20260708%E5%B0%8F%E6%A8%BD/";
@@ -342,6 +392,7 @@
 
     const gallery = document.querySelector("#gallery");
     const viewer = document.querySelector("#viewer");
+    const viewerStage = document.querySelector("#viewerStage");
     const viewerImg = document.querySelector("#viewerImg");
     const viewerTitle = document.querySelector("#viewerTitle");
     const viewerStatus = document.querySelector("#viewerStatus");
@@ -372,7 +423,7 @@
       const jpegBlob = await heic2any({
         blob: heicBlob,
         toType: "image/jpeg",
-        quality: 0.9
+        quality: 0.92
       });
 
       const objectUrl = URL.createObjectURL(
@@ -450,10 +501,28 @@
       return await convertHeicToJpegUrl(fileName);
     }
 
+    function fitViewerToHalfOriginal() {
+      const naturalWidth = viewerImg.naturalWidth || 0;
+      const naturalHeight = viewerImg.naturalHeight || 0;
+
+      if (!naturalWidth || !naturalHeight) return;
+
+      viewerImg.style.width = Math.round(naturalWidth * 0.5) + "px";
+      viewerImg.style.height = "auto";
+
+      requestAnimationFrame(() => {
+        viewerStage.scrollLeft = Math.max(0, (viewerStage.scrollWidth - viewerStage.clientWidth) / 2);
+        viewerStage.scrollTop = Math.max(0, (viewerStage.scrollHeight - viewerStage.clientHeight) / 2);
+      });
+    }
+
     async function openViewer(fileName) {
       viewerTitle.textContent = fileName;
       viewerImg.removeAttribute("src");
       viewerImg.alt = fileName;
+      viewerImg.style.width = "";
+      viewerImg.style.height = "";
+
       viewerStatus.classList.remove("hide");
       viewerStatus.innerHTML = `
         <div>
@@ -463,11 +532,18 @@
         </div>
       `;
 
-      viewer.showModal();
+      viewer.classList.add("show");
+      viewer.setAttribute("aria-hidden", "false");
+      document.body.classList.add("viewer-open");
 
       try {
         const url = await getPreviewUrl(fileName);
-        viewerImg.onload = () => viewerStatus.classList.add("hide");
+
+        viewerImg.onload = () => {
+          viewerStatus.classList.add("hide");
+          fitViewerToHalfOriginal();
+        };
+
         viewerImg.onerror = () => {
           viewerStatus.innerHTML = `
             <div>
@@ -476,6 +552,7 @@
             </div>
           `;
         };
+
         viewerImg.src = url;
       } catch (error) {
         console.error(error);
@@ -486,6 +563,17 @@
           </div>
         `;
       }
+    }
+
+    function closeViewerNow() {
+      viewer.classList.remove("show");
+      viewer.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("viewer-open");
+      viewerImg.removeAttribute("src");
+      viewerImg.style.width = "";
+      viewerImg.style.height = "";
+      viewerStage.scrollLeft = 0;
+      viewerStage.scrollTop = 0;
     }
 
     photos.forEach((fileName, index) => {
@@ -534,21 +622,61 @@
       gallery.appendChild(card);
     });
 
-    closeViewer.addEventListener("click", () => viewer.close());
-
-    viewer.addEventListener("click", (event) => {
-      const rect = viewer.getBoundingClientRect();
-      const clickedOutside =
-        event.clientX < rect.left ||
-        event.clientX > rect.right ||
-        event.clientY < rect.top ||
-        event.clientY > rect.bottom;
-
-      if (clickedOutside) viewer.close();
-    });
+    closeViewer.addEventListener("click", closeViewerNow);
 
     window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && viewer.open) viewer.close();
+      if (event.key === "Escape" && viewer.classList.contains("show")) closeViewerNow();
+    });
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let scrollStartLeft = 0;
+    let scrollStartTop = 0;
+
+    viewerStage.addEventListener("mousedown", (event) => {
+      if (!viewer.classList.contains("show")) return;
+      isDragging = true;
+      viewerStage.classList.add("dragging");
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      scrollStartLeft = viewerStage.scrollLeft;
+      scrollStartTop = viewerStage.scrollTop;
+      event.preventDefault();
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!isDragging) return;
+      const dx = event.clientX - dragStartX;
+      const dy = event.clientY - dragStartY;
+      viewerStage.scrollLeft = scrollStartLeft - dx;
+      viewerStage.scrollTop = scrollStartTop - dy;
+    });
+
+    window.addEventListener("mouseup", () => {
+      isDragging = false;
+      viewerStage.classList.remove("dragging");
+    });
+
+    viewerStage.addEventListener("touchstart", (event) => {
+      if (event.touches.length !== 1) return;
+      isDragging = true;
+      dragStartX = event.touches[0].clientX;
+      dragStartY = event.touches[0].clientY;
+      scrollStartLeft = viewerStage.scrollLeft;
+      scrollStartTop = viewerStage.scrollTop;
+    }, { passive: true });
+
+    viewerStage.addEventListener("touchmove", (event) => {
+      if (!isDragging || event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - dragStartX;
+      const dy = event.touches[0].clientY - dragStartY;
+      viewerStage.scrollLeft = scrollStartLeft - dx;
+      viewerStage.scrollTop = scrollStartTop - dy;
+    }, { passive: true });
+
+    viewerStage.addEventListener("touchend", () => {
+      isDragging = false;
     });
 
     window.addEventListener("beforeunload", () => {
