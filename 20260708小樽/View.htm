@@ -4,16 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>20260708 小樽相簿</title>
+
+  <!--
+    Chrome / Edge / Firefox 通常無法原生顯示 HEIC。
+    這裡使用 heic2any：若 <img> 載入 HEIC 失敗，就用 JS/WASM 在瀏覽器端轉成 JPEG 預覽。
+    原始下載仍然維持 .HEIC。
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
+
   <style>
     :root {
       --bg: #050507;
       --panel: #111217;
-      --panel-2: #181a22;
       --text: #f3f4f6;
       --muted: #9ca3af;
       --line: rgba(255,255,255,.1);
       --accent: #7dd3fc;
-      --danger: #f87171;
       --radius: 22px;
       --shadow: 0 24px 80px rgba(0,0,0,.45);
     }
@@ -64,7 +70,7 @@
 
     .desc {
       margin: 16px 0 0;
-      max-width: 620px;
+      max-width: 660px;
       color: var(--muted);
       line-height: 1.7;
       font-size: 15px;
@@ -139,10 +145,10 @@
 
     .card:hover .thumb img { transform: scale(1.035); }
 
-    .fallback {
-      display: none;
+    .status {
       position: absolute;
       inset: 0;
+      display: grid;
       place-items: center;
       padding: 24px;
       text-align: center;
@@ -150,14 +156,29 @@
       background:
         linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
         #0b0c10;
+      z-index: 1;
     }
 
-    .fallback strong {
+    .status strong {
       display: block;
       color: var(--text);
       margin-bottom: 8px;
       font-size: 16px;
     }
+
+    .status.hide { display: none; }
+
+    .spinner {
+      width: 26px;
+      height: 26px;
+      margin: 0 auto 14px;
+      border-radius: 999px;
+      border: 3px solid rgba(255,255,255,.16);
+      border-top-color: var(--accent);
+      animation: spin .9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .meta {
       padding: 14px 14px 16px;
@@ -187,10 +208,10 @@
     .notice {
       margin-top: 18px;
       padding: 14px 16px;
-      border: 1px solid rgba(248,113,113,.25);
+      border: 1px solid rgba(125,211,252,.25);
       border-radius: 18px;
-      background: rgba(248,113,113,.08);
-      color: #fecaca;
+      background: rgba(125,211,252,.08);
+      color: #dbeafe;
       font-size: 13px;
       line-height: 1.65;
     }
@@ -226,6 +247,7 @@
     }
 
     .viewer-body {
+      position: relative;
       padding: 16px;
       display: grid;
       place-items: center;
@@ -268,7 +290,7 @@
         <div class="eyebrow">Photo Gallery</div>
         <h1>20260708<br>小樽相簿</h1>
         <p class="desc">
-          黑色沉浸式相簿介面。點擊照片可放大預覽，每張照片都可以單獨下載，也可以一次下載整包 ZIP。
+          黑色沉浸式相簿介面。Chrome 若無法原生顯示 HEIC，會自動在瀏覽器端轉成 JPEG 預覽；下載仍保留原始 HEIC。
         </p>
       </div>
 
@@ -285,7 +307,7 @@
     <section id="gallery" class="grid" aria-label="小樽相簿"></section>
 
     <div class="notice">
-      注意：HEIC/HEIF 不是所有瀏覽器都能直接顯示。若 Chrome、Edge、Firefox 看不到縮圖，檔案仍可下載；建議另存一份 JPG / WebP / AVIF 版本給網頁預覽。
+      第一次在 Chrome 開啟 HEIC 會比較慢，因為瀏覽器要下載解碼器並轉圖。照片多或解析度很高時，手機可能會稍微卡。
     </div>
   </main>
 
@@ -295,6 +317,13 @@
       <button class="btn close" id="closeViewer" aria-label="關閉">×</button>
     </div>
     <div class="viewer-body">
+      <div id="viewerStatus" class="status hide">
+        <div>
+          <div class="spinner"></div>
+          <strong>正在轉換 HEIC 預覽</strong>
+          <span>請稍候</span>
+        </div>
+      </div>
       <img id="viewerImg" alt="">
     </div>
   </dialog>
@@ -315,18 +344,148 @@
     const viewer = document.querySelector("#viewer");
     const viewerImg = document.querySelector("#viewerImg");
     const viewerTitle = document.querySelector("#viewerTitle");
+    const viewerStatus = document.querySelector("#viewerStatus");
     const closeViewer = document.querySelector("#closeViewer");
+
+    const previewCache = new Map();
 
     function fileUrl(fileName) {
       return baseUrl + encodeURIComponent(fileName);
     }
 
-    function openViewer(fileName) {
+    function isHeic(fileName) {
+      return /\.(heic|heif)$/i.test(fileName);
+    }
+
+    async function convertHeicToJpegUrl(fileName) {
+      if (previewCache.has(fileName)) return previewCache.get(fileName);
+
+      if (typeof heic2any !== "function") {
+        throw new Error("heic2any 尚未載入，請確認網路或 CDN。");
+      }
+
+      const response = await fetch(fileUrl(fileName));
+      if (!response.ok) throw new Error("圖片下載失敗：" + response.status);
+
+      const heicBlob = await response.blob();
+
+      const jpegBlob = await heic2any({
+        blob: heicBlob,
+        toType: "image/jpeg",
+        quality: 0.9
+      });
+
+      const objectUrl = URL.createObjectURL(
+        Array.isArray(jpegBlob) ? jpegBlob[0] : jpegBlob
+      );
+
+      previewCache.set(fileName, objectUrl);
+      return objectUrl;
+    }
+
+    async function loadImageWithHeicFallback(img, fileName, statusEl) {
       const url = fileUrl(fileName);
-      viewerImg.src = url;
-      viewerImg.alt = fileName;
+
+      statusEl.classList.remove("hide");
+      statusEl.innerHTML = `
+        <div>
+          <div class="spinner"></div>
+          <strong>載入照片中</strong>
+          <span>${fileName}</span>
+        </div>
+      `;
+
+      img.onload = () => {
+        statusEl.classList.add("hide");
+      };
+
+      img.onerror = async () => {
+        if (!isHeic(fileName)) {
+          statusEl.innerHTML = `
+            <div>
+              <strong>預覽載入失敗</strong>
+              <span>請直接下載原圖。</span>
+            </div>
+          `;
+          return;
+        }
+
+        try {
+          statusEl.innerHTML = `
+            <div>
+              <div class="spinner"></div>
+              <strong>正在轉換 HEIC 預覽</strong>
+              <span>Chrome 需要前端解碼</span>
+            </div>
+          `;
+
+          const convertedUrl = await convertHeicToJpegUrl(fileName);
+
+          img.onerror = () => {
+            statusEl.innerHTML = `
+              <div>
+                <strong>轉換後仍無法預覽</strong>
+                <span>請直接下載原始 HEIC。</span>
+              </div>
+            `;
+          };
+
+          img.src = convertedUrl;
+        } catch (error) {
+          console.error(error);
+          statusEl.innerHTML = `
+            <div>
+              <strong>HEIC 轉換失敗</strong>
+              <span>${error.message || "請確認 GitHub raw 檔案可被跨網域讀取。"}</span>
+            </div>
+          `;
+        }
+      };
+
+      img.src = url;
+    }
+
+    async function getPreviewUrl(fileName) {
+      if (!isHeic(fileName)) return fileUrl(fileName);
+      return await convertHeicToJpegUrl(fileName);
+    }
+
+    async function openViewer(fileName) {
       viewerTitle.textContent = fileName;
+      viewerImg.removeAttribute("src");
+      viewerImg.alt = fileName;
+      viewerStatus.classList.remove("hide");
+      viewerStatus.innerHTML = `
+        <div>
+          <div class="spinner"></div>
+          <strong>正在準備預覽</strong>
+          <span>${fileName}</span>
+        </div>
+      `;
+
       viewer.showModal();
+
+      try {
+        const url = await getPreviewUrl(fileName);
+        viewerImg.onload = () => viewerStatus.classList.add("hide");
+        viewerImg.onerror = () => {
+          viewerStatus.innerHTML = `
+            <div>
+              <strong>放大預覽失敗</strong>
+              <span>請下載原圖查看。</span>
+            </div>
+          `;
+        };
+        viewerImg.src = url;
+      } catch (error) {
+        console.error(error);
+        viewerStatus.innerHTML = `
+          <div>
+            <strong>HEIC 轉換失敗</strong>
+            <span>${error.message || "請直接下載原圖。"}</span>
+          </div>
+        `;
+      }
     }
 
     photos.forEach((fileName, index) => {
@@ -337,11 +496,12 @@
 
       card.innerHTML = `
         <div class="thumb" role="button" tabindex="0" aria-label="放大 ${fileName}">
-          <img src="${url}" alt="${fileName}" loading="lazy">
-          <div class="fallback">
+          <img alt="${fileName}" loading="lazy">
+          <div class="status">
             <div>
-              <strong>此瀏覽器可能不支援 HEIC 預覽</strong>
-              <span>請使用 Safari / iPhone 開啟，或直接下載原圖。</span>
+              <div class="spinner"></div>
+              <strong>載入照片中</strong>
+              <span>${fileName}</span>
             </div>
           </div>
         </div>
@@ -349,20 +509,17 @@
           <div class="name">${String(index + 1).padStart(2, "0")} · ${fileName}</div>
           <div class="actions">
             <button class="btn preview" type="button">放大</button>
-            <a class="btn" href="${url}" download="${fileName}">下載</a>
+            <a class="btn" href="${url}" download="${fileName}">下載 HEIC</a>
           </div>
         </div>
       `;
 
       const img = card.querySelector("img");
-      const fallback = card.querySelector(".fallback");
+      const statusEl = card.querySelector(".status");
       const thumb = card.querySelector(".thumb");
       const preview = card.querySelector(".preview");
 
-      img.addEventListener("error", () => {
-        img.style.opacity = "0";
-        fallback.style.display = "grid";
-      });
+      loadImageWithHeicFallback(img, fileName, statusEl);
 
       thumb.addEventListener("click", () => openViewer(fileName));
       thumb.addEventListener("keydown", (event) => {
@@ -393,7 +550,10 @@
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && viewer.open) viewer.close();
     });
+
+    window.addEventListener("beforeunload", () => {
+      previewCache.forEach((url) => URL.revokeObjectURL(url));
+    });
   </script>
 </body>
 </html>
-
