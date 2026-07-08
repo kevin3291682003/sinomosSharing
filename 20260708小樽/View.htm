@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>20260708 小樽相簿</title>
+  <style>
+    :root {
+      --bg: #050507;
+      --panel: #111217;
+      --panel-2: #181a22;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --line: rgba(255,255,255,.1);
+      --accent: #7dd3fc;
+      --danger: #f87171;
+      --radius: 22px;
+      --shadow: 0 24px 80px rgba(0,0,0,.45);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(125,211,252,.18), transparent 34%),
+        radial-gradient(circle at 80% 20%, rgba(168,85,247,.12), transparent 30%),
+        var(--bg);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 56px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 13px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 6vw, 72px);
+      letter-spacing: -0.06em;
+      line-height: .92;
+    }
+
+    .desc {
+      margin: 16px 0 0;
+      max-width: 620px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      backdrop-filter: blur(16px);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 650;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.11);
+      border-color: rgba(255,255,255,.22);
+    }
+
+    .btn.primary {
+      color: #061016;
+      background: linear-gradient(135deg, #bae6fd, #7dd3fc);
+      border-color: transparent;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      grid-column: span 4;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+      box-shadow: var(--shadow);
+    }
+
+    .thumb {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: #0b0c10;
+      overflow: hidden;
+      cursor: zoom-in;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform .35s ease, opacity .25s ease;
+    }
+
+    .card:hover .thumb img { transform: scale(1.035); }
+
+    .fallback {
+      display: none;
+      position: absolute;
+      inset: 0;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
+        #0b0c10;
+    }
+
+    .fallback strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+
+    .meta {
+      padding: 14px 14px 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .name {
+      color: #e5e7eb;
+      font-size: 13px;
+      line-height: 1.35;
+      word-break: break-all;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .actions .btn {
+      flex: 1;
+      min-height: 38px;
+      font-size: 13px;
+      padding: 0 12px;
+    }
+
+    .notice {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid rgba(248,113,113,.25);
+      border-radius: 18px;
+      background: rgba(248,113,113,.08);
+      color: #fecaca;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    dialog {
+      width: min(1100px, calc(100% - 24px));
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: #08090d;
+      color: var(--text);
+      box-shadow: 0 40px 120px rgba(0,0,0,.75);
+    }
+
+    dialog::backdrop {
+      background: rgba(0,0,0,.78);
+      backdrop-filter: blur(10px);
+    }
+
+    .viewer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .viewer-title {
+      font-size: 14px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .viewer-body {
+      padding: 16px;
+      display: grid;
+      place-items: center;
+      min-height: 55vh;
+    }
+
+    .viewer-body img {
+      max-width: 100%;
+      max-height: 72vh;
+      border-radius: 16px;
+      object-fit: contain;
+      background: #111;
+    }
+
+    .close {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    @media (max-width: 900px) {
+      .hero { align-items: flex-start; flex-direction: column; }
+      .toolbar { justify-content: flex-start; }
+      .card { grid-column: span 6; }
+    }
+
+    @media (max-width: 600px) {
+      .shell { width: min(100% - 22px, 1180px); padding-top: 26px; }
+      .card { grid-column: span 12; }
+      .actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Photo Gallery</div>
+        <h1>20260708<br>小樽相簿</h1>
+        <p class="desc">
+          黑色沉浸式相簿介面。點擊照片可放大預覽，每張照片都可以單獨下載，也可以一次下載整包 ZIP。
+        </p>
+      </div>
+
+      <div class="toolbar">
+        <a class="btn primary" href="https://raw.githubusercontent.com/kevin3291682003/sinomosSharing/main/20260708%E5%B0%8F%E6%A8%BD/20260708%E5%B0%8F%E6%A8%BDall.zip" download>
+          下載全部 ZIP
+        </a>
+        <a class="btn" href="https://github.com/kevin3291682003/sinomosSharing/tree/main/20260708%E5%B0%8F%E6%A8%BD" target="_blank" rel="noreferrer">
+          開啟 GitHub
+        </a>
+      </div>
+    </section>
+
+    <section id="gallery" class="grid" aria-label="小樽相簿"></section>
+
+    <div class="notice">
+      注意：HEIC/HEIF 不是所有瀏覽器都能直接顯示。若 Chrome、Edge、Firefox 看不到縮圖，檔案仍可下載；建議另存一份 JPG / WebP / AVIF 版本給網頁預覽。
+    </div>
+  </main>
+
+  <dialog id="viewer">
+    <div class="viewer-head">
+      <div id="viewerTitle" class="viewer-title"></div>
+      <button class="btn close" id="closeViewer" aria-label="關閉">×</button>
+    </div>
+    <div class="viewer-body">
+      <img id="viewerImg" alt="">
+    </div>
+  </dialog>
+
+  <script>
+    const baseUrl = "https://raw.githubusercontent.com/kevin3291682003/sinomosSharing/main/20260708%E5%B0%8F%E6%A8%BD/";
+
+    const photos = [
+      "IMG_20260708_145330.HEIC",
+      "IMG_20260708_145330_1.HEIC",
+      "IMG_20260708_145330_2.HEIC",
+      "IMG_20260708_145330_3.HEIC",
+      "IMG_20260708_145329.HEIC",
+      "IMG_20260708_145329_1.HEIC"
+    ];
+
+    const gallery = document.querySelector("#gallery");
+    const viewer = document.querySelector("#viewer");
+    const viewerImg = document.querySelector("#viewerImg");
+    const viewerTitle = document.querySelector("#viewerTitle");
+    const closeViewer = document.querySelector("#closeViewer");
+
+    function fileUrl(fileName) {
+      return baseUrl + encodeURIComponent(fileName);
+    }
+
+    function openViewer(fileName) {
+      const url = fileUrl(fileName);
+      viewerImg.src = url;
+      viewerImg.alt = fileName;
+      viewerTitle.textContent = fileName;
+      viewer.showModal();
+    }
+
+    photos.forEach((fileName, index) => {
+      const url = fileUrl(fileName);
+
+      const card = document.createElement("article");
+      card.className = "card";
+
+      card.innerHTML = `
+        <div class="thumb" role="button" tabindex="0" aria-label="放大 ${fileName}">
+          <img src="${url}" alt="${fileName}" loading="lazy">
+          <div class="fallback">
+            <div>
+              <strong>此瀏覽器可能不支援 HEIC 預覽</strong>
+              <span>請使用 Safari / iPhone 開啟，或直接下載原圖。</span>
+            </div>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="name">${String(index + 1).padStart(2, "0")} · ${fileName}</div>
+          <div class="actions">
+            <button class="btn preview" type="button">放大</button>
+            <a class="btn" href="${url}" download="${fileName}">下載</a>
+          </div>
+        </div>
+      `;
+
+      const img = card.querySelector("img");
+      const fallback = card.querySelector(".fallback");
+      const thumb = card.querySelector(".thumb");
+      const preview = card.querySelector(".preview");
+
+      img.addEventListener("error", () => {
+        img.style.opacity = "0";
+        fallback.style.display = "grid";
+      });
+
+      thumb.addEventListener("click", () => openViewer(fileName));
+      thumb.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openViewer(fileName);
+        }
+      });
+
+      preview.addEventListener("click", () => openViewer(fileName));
+
+      gallery.appendChild(card);
+    });
+
+    closeViewer.addEventListener("click", () => viewer.close());
+
+    viewer.addEventListener("click", (event) => {
+      const rect = viewer.getBoundingClientRect();
+      const clickedOutside =
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom;
+
+      if (clickedOutside) viewer.close();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && viewer.open) viewer.close();
+    });
+  </script>
+</body>
+</html>
+
