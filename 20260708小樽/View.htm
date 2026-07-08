@@ -235,9 +235,15 @@
       z-index: 1003;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
       pointer-events: none;
+    }
+
+    .viewer-actions {
+      display: grid;
+      gap: 10px;
+      pointer-events: auto;
     }
 
     .viewer-title {
@@ -253,7 +259,7 @@
       pointer-events: auto;
     }
 
-    .viewer-close {
+    .viewer-icon-btn {
       width: 46px;
       height: 46px;
       padding: 0;
@@ -261,6 +267,16 @@
       font-size: 28px;
       line-height: 1;
       pointer-events: auto;
+    }
+
+    .viewer-download {
+      font-size: 22px;
+    }
+
+    .viewer-download svg {
+      width: 22px;
+      height: 22px;
+      display: block;
     }
 
     .viewer-stage {
@@ -324,7 +340,7 @@
       .actions { flex-direction: column; }
       .viewer-stage { padding: 78px 22px 34px; }
       .viewer-title { font-size: 12px; max-width: calc(100vw - 82px); }
-      .viewer-close { width: 42px; height: 42px; }
+      .viewer-icon-btn { width: 42px; height: 42px; }
     }
   </style>
 </head>
@@ -335,7 +351,7 @@
         <div class="eyebrow">Photo Gallery</div>
         <h1>20260708<br>小樽相簿</h1>
         <p class="desc">
-          黑色沉浸式相簿介面。Chrome 若無法原生顯示 HEIC，會自動在瀏覽器端轉成 JPEG 預覽；按下放大會以約 1/2 原始圖尺寸開啟。
+          v1.2
         </p>
       </div>
 
@@ -359,7 +375,14 @@
   <section id="viewer" class="viewer" aria-hidden="true">
     <div class="viewer-topbar">
       <div id="viewerTitle" class="viewer-title"></div>
-      <button class="btn viewer-close" id="closeViewer" type="button" aria-label="關閉">×</button>
+      <div class="viewer-actions">
+        <button class="btn viewer-icon-btn" id="closeViewer" type="button" aria-label="關閉">×</button>
+        <a class="btn viewer-icon-btn viewer-download" id="viewerDownload" href="#" download aria-label="下載此照片" title="下載此照片">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M11 4a1 1 0 0 1 2 0v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4Zm-5 14a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2H7a1 1 0 0 1-1-1Z"/>
+          </svg>
+        </a>
+      </div>
     </div>
 
     <div id="viewerStage" class="viewer-stage">
@@ -397,6 +420,7 @@
     const viewerTitle = document.querySelector("#viewerTitle");
     const viewerStatus = document.querySelector("#viewerStatus");
     const closeViewer = document.querySelector("#closeViewer");
+    const viewerDownload = document.querySelector("#viewerDownload");
 
     const previewCache = new Map();
 
@@ -518,6 +542,8 @@
 
     async function openViewer(fileName) {
       viewerTitle.textContent = fileName;
+      viewerDownload.href = fileUrl(fileName);
+      viewerDownload.download = fileName;
       viewerImg.removeAttribute("src");
       viewerImg.alt = fileName;
       viewerImg.style.width = "";
